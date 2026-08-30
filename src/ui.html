@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Easy Components</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    margin: 0;
+    font-family: Inter, "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--figma-color-text, #1e1e1e);
+    background: var(--figma-color-bg, #ffffff);
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 14px 16px;
+    border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
+    flex-shrink: 0;
+  }
+  .title { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 500; padding: 4px 9px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .status-pill.ok {
+    color: var(--figma-color-text-success, #14804a);
+    background: var(--figma-color-bg-success, rgba(20, 174, 92, 0.12));
+  }
+  .status-pill.ok .dot { background: var(--figma-color-icon-success, #14ae5c); }
+  .status-pill.muted {
+    color: var(--figma-color-text-secondary, #6b6b6b);
+    background: var(--figma-color-bg-secondary, rgba(0, 0, 0, 0.06));
+  }
+  .status-pill.muted .dot { background: var(--figma-color-icon-secondary, #b3b3b3); }
+
+  .body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 18px; }
+
+  .section-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--figma-color-text-secondary, #808080); margin-bottom: 8px;
+  }
+
+  .action-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 9px 10px; border-radius: 7px; cursor: pointer; text-align: left;
+    border: 1px solid var(--figma-color-border, #d6d6d6);
+    background: var(--figma-color-bg, #ffffff); color: inherit;
+    font-size: 11.5px; font-weight: 500;
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .action-btn:hover:not(:disabled) {
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    border-color: var(--figma-color-border-strong, #b3b3b3);
+  }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .action-btn svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--figma-color-icon-secondary, #808080); }
+  .action-btn + .action-btn { margin-top: 6px; }
+  .action-btn .sub { display: block; font-size: 10px; font-weight: 400; color: var(--figma-color-text-secondary, #808080); margin-top: 1px; }
+
+  .arrange-row { display: flex; gap: 6px; }
+  .arrange-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 4px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--figma-color-border, #d6d6d6);
+    background: var(--figma-color-bg, #ffffff); color: inherit;
+    font-size: 9.5px; font-weight: 500;
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .arrange-btn:hover:not(:disabled) {
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    border-color: var(--figma-color-border-strong, #b3b3b3);
+  }
+  .arrange-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .arrange-btn svg { width: 15px; height: 15px; color: var(--figma-color-icon-secondary, #808080); }
+
+  .rename-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .rename-btn {
+    padding: 8px 8px; border-radius: 7px; cursor: pointer; text-align: left;
+    border: 1px solid var(--figma-color-border, #d6d6d6);
+    background: var(--figma-color-bg, #ffffff); color: inherit;
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .rename-btn:hover:not(:disabled) {
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    border-color: var(--figma-color-border-strong, #b3b3b3);
+  }
+  .rename-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .rename-btn .example {
+    display: block; font-size: 11px; font-weight: 600; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .rename-btn .label {
+    display: block; font-size: 9px; color: var(--figma-color-text-secondary, #808080); margin-top: 1px;
+  }
+
+  .note { font-size: 10px; color: var(--figma-color-text-secondary, #808080); line-height: 1.5; margin-top: 8px; }
+
+  .body::-webkit-scrollbar { width: 8px; }
+  .body::-webkit-scrollbar-thumb { background: var(--figma-color-border, #d6d6d6); border-radius: 8px; }
+  .body::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/*__INLINE_SCRIPT__*/
+</script>
+</body>
+</html>

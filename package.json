@@ -1,0 +1,19 @@
+{
+  "name": "easy-components",
+  "version": "1.0.0",
+  "description": "Figma plugin: create/un-create components individually, reorder layers, and batch-rename layers into consistent naming conventions.",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:code && npm run build:ui",
+    "build:code": "esbuild src/code.ts --bundle --target=es2017 --outfile=dist/code.js",
+    "build:ui": "esbuild src/ui.ts --bundle --target=es2017 --outfile=dist/ui.bundle.js && node scripts/inline-ui.js",
+    "watch:code": "npm run build:code -- --watch",
+    "watch:ui": "npm run build:ui -- --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.0.0",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.5.4"
+  }
+}
