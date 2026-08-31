@@ -1,4 +1,4 @@
-import type { CaseFormat, PluginToUIMessage, ReorderAction, UIToPluginMessage } from './types';
+import type { CaseFormat, PluginToUIMessage, SortCriteria, UIToPluginMessage } from './types';
 
 figma.showUI(__html__, { width: 320, height: 480, title: 'Easy Components', themeColors: true });
 
@@ -8,6 +8,24 @@ function post(msg: PluginToUIMessage): void {
 
 function isContainerNode(node: SceneNode): node is SceneNode & ChildrenMixin {
   return 'children' in node;
+}
+
+function hasExpandedProp(node: BaseNode): node is BaseNode & { expanded: boolean } {
+  return 'expanded' in node;
+}
+
+/**
+ * Figma's API always shows a freshly-created container expanded in the
+ * layers panel, regardless of what its source node looked like — this is a
+ * known API quirk, not something we're causing. Explicitly set `expanded`
+ * AFTER children have been moved in (moving children can itself flip it
+ * back to true), so the final state matches the original node's collapsed/
+ * expanded state instead of forcing it open.
+ */
+function matchExpandedState(source: SceneNode, target: BaseNode): void {
+  if (hasExpandedProp(target)) {
+    target.expanded = hasExpandedProp(source) ? source.expanded : false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,11 +107,13 @@ function convertNodeToComponent(node: SceneNode): ComponentNode {
     for (const child of [...node.children]) {
       component.appendChild(child);
     }
+    matchExpandedState(node, component);
     node.remove();
   } else {
     component.appendChild(node);
     node.x = 0;
     node.y = 0;
+    component.expanded = false;
   }
 
   if (parent && 'insertChild' in parent && index >= 0) {
@@ -163,6 +183,7 @@ function convertComponentToFrame(component: ComponentNode): FrameNode {
   for (const child of [...component.children]) {
     frame.appendChild(child);
   }
+  matchExpandedState(component, frame);
 
   component.remove();
 
@@ -208,48 +229,69 @@ async function uncomponentSelection(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Feature 3: rearrange (z-order) selected layers
+// Feature 3: rearrange — sort the selected layers by a chosen criteria
 // ---------------------------------------------------------------------------
 
-function reorderSelection(action: ReorderAction): void {
+function getComparator(criteria: SortCriteria): (a: SceneNode, b: SceneNode) => number {
+  switch (criteria) {
+    case 'name-asc':
+      return (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    case 'name-desc':
+      return (a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+    case 'x-asc':
+      return (a, b) => a.x - b.x;
+    case 'y-asc':
+      return (a, b) => a.y - b.y;
+    case 'size-desc':
+      return (a, b) => b.width * b.height - a.width * a.height;
+    case 'size-asc':
+      return (a, b) => a.width * a.height - b.width * b.height;
+  }
+}
+
+/**
+ * Re-sequences the selected layers, per parent, into the order given by
+ * `criteria` — non-selected siblings keep their exact position; only the
+ * "slots" the selection currently occupies get filled with the newly
+ * sorted selection. Rebuilds each affected parent's full child order via
+ * sequential appendChild rather than juggling individual indices, which
+ * sidesteps the index-shifting bugs that come from repeated insertChild
+ * calls into a mutating array.
+ */
+function sortSelection(criteria: SortCriteria): void {
   const selection = figma.currentPage.selection;
-  if (selection.length === 0) {
-    figma.notify('Easy Components: select at least one layer first');
+  if (selection.length < 2) {
+    figma.notify('Easy Components: select at least two layers to rearrange');
     return;
   }
 
-  const byParent = new Map<BaseNode & ChildrenMixin, SceneNode[]>();
+  const selectedSet = new Set<SceneNode>(selection);
+  const parents = new Set<BaseNode & ChildrenMixin>();
   for (const node of selection) {
     const parent = node.parent;
-    if (!parent || !('children' in parent)) continue;
-    const list = byParent.get(parent as BaseNode & ChildrenMixin) ?? [];
-    list.push(node);
-    byParent.set(parent as BaseNode & ChildrenMixin, list);
+    if (parent && 'children' in parent) parents.add(parent as BaseNode & ChildrenMixin);
   }
 
-  for (const [parent, nodes] of byParent) {
-    const children = parent.children;
-    const sorted = [...nodes].sort((a, b) => children.indexOf(a) - children.indexOf(b));
+  const comparator = getComparator(criteria);
 
-    if (action === 'front') {
-      // children[last] renders on top — appendChild moves to the end.
-      for (const node of sorted) parent.appendChild(node);
-    } else if (action === 'back') {
-      for (const node of [...sorted].reverse()) parent.insertChild(0, node);
-    } else if (action === 'forward') {
-      for (const node of [...sorted].reverse()) {
-        const idx = children.indexOf(node);
-        if (idx < children.length - 1) parent.insertChild(idx + 1, node);
-      }
-    } else {
-      for (const node of sorted) {
-        const idx = children.indexOf(node);
-        if (idx > 0) parent.insertChild(idx - 1, node);
-      }
+  for (const parent of parents) {
+    const originalChildren = [...parent.children];
+    const selectedHere = originalChildren.filter((n): n is SceneNode => selectedSet.has(n as SceneNode));
+    if (selectedHere.length < 2) continue;
+
+    const sortedQueue = [...selectedHere].sort(comparator);
+    let queueIndex = 0;
+
+    const finalOrder = originalChildren.map((node) =>
+      selectedSet.has(node as SceneNode) ? sortedQueue[queueIndex++] : node
+    );
+
+    for (const node of finalOrder) {
+      parent.appendChild(node);
     }
   }
 
-  figma.notify('Easy Components: reordered');
+  figma.notify('Easy Components: rearranged');
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +358,79 @@ function renameSelection(format: CaseFormat): void {
 }
 
 // ---------------------------------------------------------------------------
+// Feature 5: duplicate finder
+// ---------------------------------------------------------------------------
+
+/**
+ * A rough "is this the same layer, twice" signature: type + trimmed
+ * lowercase name + rounded width/height. Deliberately not comparing fills
+ * or children content — that's a much heavier check for marginal benefit,
+ * since accidental duplicates (copy-paste, repeated drag) almost always
+ * keep the same name, type, and size.
+ */
+function nodeSignature(node: SceneNode): string {
+  const w = Math.round(node.width);
+  const h = Math.round(node.height);
+  const name = node.name.trim().toLowerCase();
+  return `${node.type}|${name}|${w}x${h}`;
+}
+
+// Kept in the plugin sandbox (not sent to the UI) so "select duplicates" /
+// "select extras" can act on the real node references from the last run.
+let lastDuplicateGroups: SceneNode[][] = [];
+
+function findDuplicates(): void {
+  const selection = figma.currentPage.selection;
+  if (selection.length < 2) {
+    figma.notify('Easy Components: select at least two layers to check for duplicates');
+    lastDuplicateGroups = [];
+    post({ type: 'duplicates-result', groups: [], totalDuplicateLayers: 0 });
+    return;
+  }
+
+  const bySignature = new Map<string, SceneNode[]>();
+  for (const node of selection) {
+    const sig = nodeSignature(node);
+    const list = bySignature.get(sig) ?? [];
+    list.push(node);
+    bySignature.set(sig, list);
+  }
+
+  lastDuplicateGroups = [...bySignature.values()].filter((nodes) => nodes.length > 1);
+
+  const totalDuplicateLayers = lastDuplicateGroups.reduce((sum, group) => sum + group.length, 0);
+  const summaries = lastDuplicateGroups.map((group) => ({
+    label: `${group[0].name} (${Math.round(group[0].width)}×${Math.round(group[0].height)})`,
+    count: group.length
+  }));
+
+  post({ type: 'duplicates-result', groups: summaries, totalDuplicateLayers });
+
+  figma.notify(
+    lastDuplicateGroups.length === 0
+      ? 'Easy Components: no duplicates found in the selection'
+      : `Easy Components: found ${lastDuplicateGroups.length} duplicate group${lastDuplicateGroups.length === 1 ? '' : 's'}`
+  );
+}
+
+function selectDuplicates(mode: 'all' | 'extras'): void {
+  if (lastDuplicateGroups.length === 0) {
+    figma.notify('Easy Components: run "Find duplicates" first');
+    return;
+  }
+
+  const result: SceneNode[] = [];
+  for (const group of lastDuplicateGroups) {
+    // "extras" keeps the first node of each group untouched and only
+    // selects the redundant copies — handy for a quick delete pass.
+    result.push(...(mode === 'all' ? group : group.slice(1)));
+  }
+
+  figma.currentPage.selection = result;
+  figma.notify(`Easy Components: selected ${result.length} layer${result.length === 1 ? '' : 's'}`);
+}
+
+// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
@@ -327,11 +442,17 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
     case 'uncomponent':
       await uncomponentSelection();
       break;
-    case 'reorder':
-      reorderSelection(msg.action);
+    case 'sort':
+      sortSelection(msg.criteria);
       break;
     case 'rename':
       renameSelection(msg.format);
+      break;
+    case 'find-duplicates':
+      findDuplicates();
+      break;
+    case 'select-duplicates':
+      selectDuplicates(msg.mode);
       break;
   }
 };

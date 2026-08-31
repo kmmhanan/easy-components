@@ -1,5 +1,15 @@
-/** Z-order actions, matching the standard "arrange" verbs. */
-export type ReorderAction = 'front' | 'forward' | 'backward' | 'back';
+/**
+ * Sort criteria for rearranging the selected layers among the sibling
+ * "slots" they currently occupy — non-selected siblings keep their
+ * position, only the selected ones get re-sequenced.
+ */
+export type SortCriteria =
+  | 'name-asc' // A → Z
+  | 'name-desc' // Z → A
+  | 'x-asc' // left → right
+  | 'y-asc' // top → bottom
+  | 'size-desc' // largest → smallest
+  | 'size-asc'; // smallest → largest
 
 /**
  * Naming conventions the rename tool can produce. When a name has no
@@ -17,16 +27,24 @@ export type CaseFormat =
   | 'upper-space' // FIGMA ICON
   | 'upper-concat'; // FIGMAICON
 
+/** How to select the results of the last "Find duplicates" run. */
+export type DuplicateSelectMode = 'all' | 'extras';
+
+export interface DuplicateGroupSummary {
+  label: string;
+  count: number;
+}
+
 /** Messages sent from the UI (iframe) to the plugin sandbox (code.ts). */
 export type UIToPluginMessage =
   | { type: 'create-components' }
   | { type: 'uncomponent' }
-  | { type: 'reorder'; action: ReorderAction }
-  | { type: 'rename'; format: CaseFormat };
+  | { type: 'sort'; criteria: SortCriteria }
+  | { type: 'rename'; format: CaseFormat }
+  | { type: 'find-duplicates' }
+  | { type: 'select-duplicates'; mode: DuplicateSelectMode };
 
 /** Messages sent from the plugin sandbox (code.ts) to the UI (iframe). */
-export type PluginToUIMessage = {
-  type: 'selection-changed';
-  hasSelection: boolean;
-  count: number;
-};
+export type PluginToUIMessage =
+  | { type: 'selection-changed'; hasSelection: boolean; count: number }
+  | { type: 'duplicates-result'; groups: DuplicateGroupSummary[]; totalDuplicateLayers: number };

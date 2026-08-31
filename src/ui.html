@@ -66,22 +66,6 @@
   .action-btn + .action-btn { margin-top: 6px; }
   .action-btn .sub { display: block; font-size: 10px; font-weight: 400; color: var(--figma-color-text-secondary, #808080); margin-top: 1px; }
 
-  .arrange-row { display: flex; gap: 6px; }
-  .arrange-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 8px 4px; border-radius: 7px; cursor: pointer;
-    border: 1px solid var(--figma-color-border, #d6d6d6);
-    background: var(--figma-color-bg, #ffffff); color: inherit;
-    font-size: 9.5px; font-weight: 500;
-    transition: background 0.1s ease, border-color 0.1s ease;
-  }
-  .arrange-btn:hover:not(:disabled) {
-    background: var(--figma-color-bg-secondary, #f5f5f5);
-    border-color: var(--figma-color-border-strong, #b3b3b3);
-  }
-  .arrange-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .arrange-btn svg { width: 15px; height: 15px; color: var(--figma-color-icon-secondary, #808080); }
-
   .rename-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .rename-btn {
     padding: 8px 8px; border-radius: 7px; cursor: pointer; text-align: left;
@@ -102,6 +86,45 @@
   }
 
   .note { font-size: 10px; color: var(--figma-color-text-secondary, #808080); line-height: 1.5; margin-top: 8px; }
+
+  /* ---------- Duplicate finder ---------- */
+  .dupe-list {
+    display: flex; flex-direction: column; gap: 4px; margin-top: 8px;
+    border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 7px; padding: 6px 8px;
+  }
+  .dupe-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; padding: 2px 0; }
+  .dupe-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dupe-count {
+    flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+    color: var(--figma-color-text-danger, #f24822);
+    background: var(--figma-color-bg-danger-tertiary, rgba(242, 72, 34, 0.1));
+  }
+  .dupe-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .mini-action-btn {
+    flex: 1; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 10.5px; font-weight: 500;
+    border: 1px solid var(--figma-color-border, #d6d6d6);
+    background: var(--figma-color-bg, #ffffff); color: inherit;
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .mini-action-btn:hover {
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    border-color: var(--figma-color-border-strong, #b3b3b3);
+  }
+
+  /* ---------- Credits ---------- */
+  .credits {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding-top: 12px; margin-top: 2px;
+    border-top: 1px solid var(--figma-color-border, #eeeeee);
+  }
+  .credits a {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 500; text-decoration: none;
+    color: var(--figma-color-text-secondary, #808080);
+    transition: color 0.12s ease;
+  }
+  .credits a:hover { color: var(--figma-color-text-brand, #0d74d6); }
+  .credits svg { width: 13px; height: 13px; }
 
   .body::-webkit-scrollbar { width: 8px; }
   .body::-webkit-scrollbar-thumb { background: var(--figma-color-border, #d6d6d6); border-radius: 8px; }
