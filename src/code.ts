@@ -1,17 +1,31 @@
-import type { CaseFormat, PluginToUIMessage, SortCriteria, UIToPluginMessage } from './types';
+/// <reference types="@figma/plugin-typings" />
 
-figma.showUI(__html__, { width: 320, height: 480, title: 'Easy Components', themeColors: true });
+import type {
+  CaseFormat,
+  PluginToUIMessage,
+  SortCriteria,
+  UIToPluginMessage,
+} from "./types";
+
+figma.showUI(__html__, {
+  width: 320,
+  height: 480,
+  title: "Easy Components",
+  themeColors: true,
+});
 
 function post(msg: PluginToUIMessage): void {
   figma.ui.postMessage(msg);
 }
 
 function isContainerNode(node: SceneNode): node is SceneNode & ChildrenMixin {
-  return 'children' in node;
+  return "children" in node;
 }
 
-function hasExpandedProp(node: BaseNode): node is BaseNode & { expanded: boolean } {
-  return 'expanded' in node;
+function hasExpandedProp(
+  node: BaseNode,
+): node is BaseNode & { expanded: boolean } {
+  return "expanded" in node;
 }
 
 /**
@@ -33,39 +47,42 @@ function matchExpandedState(source: SceneNode, target: BaseNode): void {
 // ---------------------------------------------------------------------------
 
 const FRAME_LIKE_PROPS = [
-  'fills',
-  'strokes',
-  'strokeWeight',
-  'strokeAlign',
-  'strokeCap',
-  'strokeJoin',
-  'dashPattern',
-  'cornerRadius',
-  'topLeftRadius',
-  'topRightRadius',
-  'bottomLeftRadius',
-  'bottomRightRadius',
-  'clipsContent',
-  'opacity',
-  'blendMode',
-  'effects',
-  'rotation',
-  'layoutMode',
-  'primaryAxisSizingMode',
-  'counterAxisSizingMode',
-  'primaryAxisAlignItems',
-  'counterAxisAlignItems',
-  'itemSpacing',
-  'paddingLeft',
-  'paddingRight',
-  'paddingTop',
-  'paddingBottom',
-  'layoutWrap',
-  'constraints'
+  "fills",
+  "strokes",
+  "strokeWeight",
+  "strokeAlign",
+  "strokeCap",
+  "strokeJoin",
+  "dashPattern",
+  "cornerRadius",
+  "topLeftRadius",
+  "topRightRadius",
+  "bottomLeftRadius",
+  "bottomRightRadius",
+  "clipsContent",
+  "opacity",
+  "blendMode",
+  "effects",
+  "rotation",
+  "layoutMode",
+  "primaryAxisSizingMode",
+  "counterAxisSizingMode",
+  "primaryAxisAlignItems",
+  "counterAxisAlignItems",
+  "itemSpacing",
+  "paddingLeft",
+  "paddingRight",
+  "paddingTop",
+  "paddingBottom",
+  "layoutWrap",
+  "constraints",
 ] as const;
 
 /** Copies whichever of the above properties exist on `source` onto `target`. */
-function copyFrameLikeProperties(source: SceneNode, target: FrameNode | ComponentNode): void {
+function copyFrameLikeProperties(
+  source: SceneNode,
+  target: FrameNode | ComponentNode,
+): void {
   const anySource = source as unknown as Record<string, unknown>;
   const anyTarget = target as unknown as Record<string, unknown>;
   for (const prop of FRAME_LIKE_PROPS) {
@@ -94,7 +111,10 @@ function copyFrameLikeProperties(source: SceneNode, target: FrameNode | Componen
  */
 function convertNodeToComponent(node: SceneNode): ComponentNode {
   const parent = node.parent;
-  const index = parent && 'children' in parent ? (parent as BaseNode & ChildrenMixin).children.indexOf(node) : -1;
+  const index =
+    parent && "children" in parent
+      ? (parent as BaseNode & ChildrenMixin).children.indexOf(node)
+      : -1;
 
   const component = figma.createComponent();
   component.name = node.name;
@@ -116,7 +136,7 @@ function convertNodeToComponent(node: SceneNode): ComponentNode {
     component.expanded = false;
   }
 
-  if (parent && 'insertChild' in parent && index >= 0) {
+  if (parent && "insertChild" in parent && index >= 0) {
     (parent as BaseNode & ChildrenMixin).insertChild(index, component);
   }
 
@@ -126,7 +146,7 @@ function convertNodeToComponent(node: SceneNode): ComponentNode {
 async function createComponentsIndividually(): Promise<void> {
   const selection = [...figma.currentPage.selection];
   if (selection.length === 0) {
-    figma.notify('Easy Components: select at least one layer first');
+    figma.notify("Easy Components: select at least one layer first");
     return;
   }
 
@@ -137,18 +157,18 @@ async function createComponentsIndividually(): Promise<void> {
   for (const original of selection) {
     let node: SceneNode = original;
 
-    if (node.type === 'COMPONENT_SET' || node.type === 'SECTION') {
+    if (node.type === "COMPONENT_SET" || node.type === "SECTION") {
       skipped++;
       continue;
     }
 
-    if (node.type === 'COMPONENT') {
+    if (node.type === "COMPONENT") {
       // Already its own component — leave it alone.
       result.push(node);
       continue;
     }
 
-    if (node.type === 'INSTANCE') {
+    if (node.type === "INSTANCE") {
       // Detach first so we're componentizing a plain copy, not the
       // original instance (mirrors what Figma's own UI does here).
       node = node.detachInstance();
@@ -160,8 +180,13 @@ async function createComponentsIndividually(): Promise<void> {
 
   figma.currentPage.selection = result;
 
-  const skippedNote = skipped > 0 ? `, skipped ${skipped} (variant sets/sections aren't supported)` : '';
-  figma.notify(`Easy Components: created ${created} component${created === 1 ? '' : 's'}${skippedNote}`);
+  const skippedNote =
+    skipped > 0
+      ? `, skipped ${skipped} (variant sets/sections aren't supported)`
+      : "";
+  figma.notify(
+    `Easy Components: created ${created} component${created === 1 ? "" : "s"}${skippedNote}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +196,9 @@ async function createComponentsIndividually(): Promise<void> {
 function convertComponentToFrame(component: ComponentNode): FrameNode {
   const parent = component.parent;
   const index =
-    parent && 'children' in parent ? (parent as BaseNode & ChildrenMixin).children.indexOf(component) : -1;
+    parent && "children" in parent
+      ? (parent as BaseNode & ChildrenMixin).children.indexOf(component)
+      : -1;
 
   const frame = figma.createFrame();
   frame.name = component.name;
@@ -187,7 +214,7 @@ function convertComponentToFrame(component: ComponentNode): FrameNode {
 
   component.remove();
 
-  if (parent && 'insertChild' in parent && index >= 0) {
+  if (parent && "insertChild" in parent && index >= 0) {
     (parent as BaseNode & ChildrenMixin).insertChild(index, frame);
   }
 
@@ -203,28 +230,35 @@ function convertComponentToFrame(component: ComponentNode): FrameNode {
 async function uncomponentSelection(): Promise<void> {
   const selection = [...figma.currentPage.selection];
   if (selection.length === 0) {
-    figma.notify('Easy Components: select at least one component first');
+    figma.notify("Easy Components: select at least one component first");
     return;
   }
 
-  const componentsInSelection = selection.filter((n): n is ComponentNode => n.type === 'COMPONENT');
+  const componentsInSelection = selection.filter(
+    (n): n is ComponentNode => n.type === "COMPONENT",
+  );
   if (componentsInSelection.length === 0) {
-    figma.notify('Easy Components: nothing in the selection is a component');
+    figma.notify("Easy Components: nothing in the selection is a component");
     return;
   }
 
   const result: SceneNode[] = [];
   for (const node of selection) {
-    result.push(node.type === 'COMPONENT' ? convertComponentToFrame(node) : node);
+    result.push(
+      node.type === "COMPONENT" ? convertComponentToFrame(node) : node,
+    );
   }
   figma.currentPage.selection = result;
 
   const skipped = selection.length - componentsInSelection.length;
-  const skippedNote = skipped > 0 ? ` (left ${skipped} non-component layer${skipped === 1 ? '' : 's'} untouched)` : '';
+  const skippedNote =
+    skipped > 0
+      ? ` (left ${skipped} non-component layer${skipped === 1 ? "" : "s"} untouched)`
+      : "";
   figma.notify(
     `Easy Components: converted ${componentsInSelection.length} component${
-      componentsInSelection.length === 1 ? '' : 's'
-    } back to frame${componentsInSelection.length === 1 ? '' : 's'}${skippedNote}. Any instances of them will lose their link.`
+      componentsInSelection.length === 1 ? "" : "s"
+    } back to frame${componentsInSelection.length === 1 ? "" : "s"}${skippedNote}. Any instances of them will lose their link.`,
   );
 }
 
@@ -232,19 +266,29 @@ async function uncomponentSelection(): Promise<void> {
 // Feature 3: rearrange — sort the selected layers by a chosen criteria
 // ---------------------------------------------------------------------------
 
-function getComparator(criteria: SortCriteria): (a: SceneNode, b: SceneNode) => number {
+function getComparator(
+  criteria: SortCriteria,
+): (a: SceneNode, b: SceneNode) => number {
   switch (criteria) {
-    case 'name-asc':
-      return (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-    case 'name-desc':
-      return (a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
-    case 'x-asc':
+    case "name-asc":
+      return (a, b) =>
+        a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+    case "name-desc":
+      return (a, b) =>
+        b.name.localeCompare(a.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+    case "x-asc":
       return (a, b) => a.x - b.x;
-    case 'y-asc':
+    case "y-asc":
       return (a, b) => a.y - b.y;
-    case 'size-desc':
+    case "size-desc":
       return (a, b) => b.width * b.height - a.width * a.height;
-    case 'size-asc':
+    case "size-asc":
       return (a, b) => a.width * a.height - b.width * b.height;
   }
 }
@@ -261,7 +305,7 @@ function getComparator(criteria: SortCriteria): (a: SceneNode, b: SceneNode) => 
 function sortSelection(criteria: SortCriteria): void {
   const selection = figma.currentPage.selection;
   if (selection.length < 2) {
-    figma.notify('Easy Components: select at least two layers to rearrange');
+    figma.notify("Easy Components: select at least two layers to rearrange");
     return;
   }
 
@@ -269,21 +313,24 @@ function sortSelection(criteria: SortCriteria): void {
   const parents = new Set<BaseNode & ChildrenMixin>();
   for (const node of selection) {
     const parent = node.parent;
-    if (parent && 'children' in parent) parents.add(parent as BaseNode & ChildrenMixin);
+    if (parent && "children" in parent)
+      parents.add(parent as BaseNode & ChildrenMixin);
   }
 
   const comparator = getComparator(criteria);
 
   for (const parent of parents) {
     const originalChildren = [...parent.children];
-    const selectedHere = originalChildren.filter((n): n is SceneNode => selectedSet.has(n as SceneNode));
+    const selectedHere = originalChildren.filter((n): n is SceneNode =>
+      selectedSet.has(n as SceneNode),
+    );
     if (selectedHere.length < 2) continue;
 
     const sortedQueue = [...selectedHere].sort(comparator);
     let queueIndex = 0;
 
     const finalOrder = originalChildren.map((node) =>
-      selectedSet.has(node as SceneNode) ? sortedQueue[queueIndex++] : node
+      selectedSet.has(node as SceneNode) ? sortedQueue[queueIndex++] : node,
     );
 
     for (const node of finalOrder) {
@@ -291,7 +338,7 @@ function sortSelection(criteria: SortCriteria): void {
     }
   }
 
-  figma.notify('Easy Components: rearranged');
+  figma.notify("Easy Components: rearranged");
 }
 
 // ---------------------------------------------------------------------------
@@ -307,9 +354,9 @@ function sortSelection(criteria: SortCriteria): void {
  */
 function splitWords(name: string): string[] {
   const normalized = name
-    .replace(/[_\-.]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[_\-.]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
     .trim();
   return normalized.split(/\s+/).filter(Boolean);
 }
@@ -324,37 +371,43 @@ function applyCaseFormat(name: string, format: CaseFormat): string {
   if (words.length <= 1) {
     // No recoverable word boundary — only uppercase/lowercase is possible.
     const single = words[0] ?? name;
-    return format === 'upper-concat' || format === 'upper-space' ? single.toUpperCase() : single.toLowerCase();
+    return format === "upper-concat" || format === "upper-space"
+      ? single.toUpperCase()
+      : single.toLowerCase();
   }
 
   switch (format) {
-    case 'kebab':
-      return words.map((w) => w.toLowerCase()).join('-');
-    case 'snake':
-      return words.map((w) => w.toLowerCase()).join('_');
-    case 'title-space':
-      return words.map(capitalize).join(' ');
-    case 'pascal':
-      return words.map(capitalize).join('');
-    case 'camel':
-      return words.map((w, i) => (i === 0 ? w.toLowerCase() : capitalize(w))).join('');
-    case 'upper-space':
-      return words.map((w) => w.toUpperCase()).join(' ');
-    case 'upper-concat':
-      return words.map((w) => w.toUpperCase()).join('');
+    case "kebab":
+      return words.map((w) => w.toLowerCase()).join("-");
+    case "snake":
+      return words.map((w) => w.toLowerCase()).join("_");
+    case "title-space":
+      return words.map(capitalize).join(" ");
+    case "pascal":
+      return words.map(capitalize).join("");
+    case "camel":
+      return words
+        .map((w, i) => (i === 0 ? w.toLowerCase() : capitalize(w)))
+        .join("");
+    case "upper-space":
+      return words.map((w) => w.toUpperCase()).join(" ");
+    case "upper-concat":
+      return words.map((w) => w.toUpperCase()).join("");
   }
 }
 
 function renameSelection(format: CaseFormat): void {
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
-    figma.notify('Easy Components: select at least one layer first');
+    figma.notify("Easy Components: select at least one layer first");
     return;
   }
   for (const node of selection) {
     node.name = applyCaseFormat(node.name, format);
   }
-  figma.notify(`Easy Components: renamed ${selection.length} layer${selection.length === 1 ? '' : 's'}`);
+  figma.notify(
+    `Easy Components: renamed ${selection.length} layer${selection.length === 1 ? "" : "s"}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -382,9 +435,11 @@ let lastDuplicateGroups: SceneNode[][] = [];
 function findDuplicates(): void {
   const selection = figma.currentPage.selection;
   if (selection.length < 2) {
-    figma.notify('Easy Components: select at least two layers to check for duplicates');
+    figma.notify(
+      "Easy Components: select at least two layers to check for duplicates",
+    );
     lastDuplicateGroups = [];
-    post({ type: 'duplicates-result', groups: [], totalDuplicateLayers: 0 });
+    post({ type: "duplicates-result", groups: [], totalDuplicateLayers: 0 });
     return;
   }
 
@@ -396,24 +451,29 @@ function findDuplicates(): void {
     bySignature.set(sig, list);
   }
 
-  lastDuplicateGroups = [...bySignature.values()].filter((nodes) => nodes.length > 1);
+  lastDuplicateGroups = [...bySignature.values()].filter(
+    (nodes) => nodes.length > 1,
+  );
 
-  const totalDuplicateLayers = lastDuplicateGroups.reduce((sum, group) => sum + group.length, 0);
+  const totalDuplicateLayers = lastDuplicateGroups.reduce(
+    (sum, group) => sum + group.length,
+    0,
+  );
   const summaries = lastDuplicateGroups.map((group) => ({
     label: `${group[0].name} (${Math.round(group[0].width)}×${Math.round(group[0].height)})`,
-    count: group.length
+    count: group.length,
   }));
 
-  post({ type: 'duplicates-result', groups: summaries, totalDuplicateLayers });
+  post({ type: "duplicates-result", groups: summaries, totalDuplicateLayers });
 
   figma.notify(
     lastDuplicateGroups.length === 0
-      ? 'Easy Components: no duplicates found in the selection'
-      : `Easy Components: found ${lastDuplicateGroups.length} duplicate group${lastDuplicateGroups.length === 1 ? '' : 's'}`
+      ? "Easy Components: no duplicates found in the selection"
+      : `Easy Components: found ${lastDuplicateGroups.length} duplicate group${lastDuplicateGroups.length === 1 ? "" : "s"}`,
   );
 }
 
-function selectDuplicates(mode: 'all' | 'extras'): void {
+function selectDuplicates(mode: "all" | "extras"): void {
   if (lastDuplicateGroups.length === 0) {
     figma.notify('Easy Components: run "Find duplicates" first');
     return;
@@ -423,11 +483,13 @@ function selectDuplicates(mode: 'all' | 'extras'): void {
   for (const group of lastDuplicateGroups) {
     // "extras" keeps the first node of each group untouched and only
     // selects the redundant copies — handy for a quick delete pass.
-    result.push(...(mode === 'all' ? group : group.slice(1)));
+    result.push(...(mode === "all" ? group : group.slice(1)));
   }
 
   figma.currentPage.selection = result;
-  figma.notify(`Easy Components: selected ${result.length} layer${result.length === 1 ? '' : 's'}`);
+  figma.notify(
+    `Easy Components: selected ${result.length} layer${result.length === 1 ? "" : "s"}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -436,22 +498,22 @@ function selectDuplicates(mode: 'all' | 'extras'): void {
 
 figma.ui.onmessage = async (msg: UIToPluginMessage) => {
   switch (msg.type) {
-    case 'create-components':
+    case "create-components":
       await createComponentsIndividually();
       break;
-    case 'uncomponent':
+    case "uncomponent":
       await uncomponentSelection();
       break;
-    case 'sort':
+    case "sort":
       sortSelection(msg.criteria);
       break;
-    case 'rename':
+    case "rename":
       renameSelection(msg.format);
       break;
-    case 'find-duplicates':
+    case "find-duplicates":
       findDuplicates();
       break;
-    case 'select-duplicates':
+    case "select-duplicates":
       selectDuplicates(msg.mode);
       break;
   }
@@ -459,8 +521,12 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
 
 function pushSelection(): void {
   const selection = figma.currentPage.selection;
-  post({ type: 'selection-changed', hasSelection: selection.length > 0, count: selection.length });
+  post({
+    type: "selection-changed",
+    hasSelection: selection.length > 0,
+    count: selection.length,
+  });
 }
 
-figma.on('selectionchange', pushSelection);
+figma.on("selectionchange", pushSelection);
 pushSelection();
